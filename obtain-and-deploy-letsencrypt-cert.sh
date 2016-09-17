@@ -117,8 +117,9 @@ readable_file() {
     if [ -z "$2" ]; then
         [ -f "$1" -a -r "$1" ]
     else
-        sudo -u "$2" \
-          [ -f "$1" -a -r "$1" ]
+        su -c \
+          "[ -f '$1' -a -r '$1' ]" \
+          - "$2"
     fi
 }
 
@@ -127,8 +128,9 @@ executable_file() {
     if [ -z "$2" ]; then
         [ -f "$1" -a -x "$1" ]
     else
-        sudo -u "$2" \
-          [ -f "$1" -a -x "$1" ]
+        su -c \
+          "[ -f '$1' -a -x '$1' ]" \
+          - "$2"
     fi
 }
 
@@ -329,16 +331,18 @@ readable_file "$intermediate_CA_file" "$zimbra_user" || {
 cat "$root_CA_file" "$intermediate_CA_file" > "$chain_file"
 
 # verify it with Zimbra tool
-sudo -u "$zimbra_user" \
-  "$zmcertmgr" verifycrt comm "$zimbra_key" "$cert_file" "$chain_file" > /dev/null || {
+su -c \
+  "'$zmcertmgr' verifycrt comm '$zimbra_key' '$cert_file' '$chain_file'" \
+  - "$zimbra_user" > /dev/null || {
     error "Verification of the issued certificate with '$zmcertmgr' failed."
     cleanup
     exit 4
 }
 
 # install the certificate to Zimbra
-sudo -u "$zimbra_user" \
-  "$zmcertmgr" deploycrt comm "$cert_file" "$chain_file" > /dev/null || {
+su -c \
+  "'$zmcertmgr' deploycrt comm '$cert_file' '$chain_file'" \
+  - "$zimbra_user" > /dev/null || {
     error "Installation of the issued certificate with '$zmcertmgr' failed."
     cleanup
     exit 4
